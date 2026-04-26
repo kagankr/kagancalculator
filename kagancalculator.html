@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nefroloji Hesap Makinesi — Spot İdrar Analiz Algoritması</title>
+<title>Nefroloji Hesap Makinesi — Eldeki Verilerle Hesap Makinesi</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
@@ -111,6 +111,81 @@
   .diff-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
   .section-divider { height: 1px; background: var(--border); margin: 14px 0; }
 
+  /* Ayırıcı tanı sentez kartı */
+  .synthesis-card {
+    background: linear-gradient(135deg, rgba(171,71,188,0.08), rgba(79,195,247,0.06));
+    border: 1px solid rgba(171,71,188,0.3);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    animation: fadeIn 0.4s ease;
+  }
+  .synthesis-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .synthesis-icon {
+    width: 28px; height: 28px;
+    background: var(--purple-bg);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+  }
+  .synthesis-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--purple);
+    letter-spacing: 0.2px;
+  }
+  .synthesis-pattern {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    font-style: italic;
+  }
+  .synthesis-pattern strong { color: var(--text); font-style: normal; }
+  .dx-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .dx-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .dx-item.priority-high { border-left-color: var(--red); }
+  .dx-item.priority-mid { border-left-color: var(--yellow); }
+  .dx-item.priority-low { border-left-color: var(--green); }
+  .dx-item-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+  .dx-item-detail {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .next-step {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent-border);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .next-step strong { color: var(--accent); }
+
   .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 12px; }
   .footer strong { color: var(--text-dim); }
 
@@ -121,7 +196,7 @@
 <div class="app">
   <div class="header">
     <div class="header-badge">🔬 Nefroloji Hesap Makinesi</div>
-    <h1>Spot İdrar Analiz Algoritması</h1>
+    <h1>Eldeki Verilerle Hesap Makinesi</h1>
     <p class="author">Dr. Kağan Karamustafalıoğlu tarafından oluşturuldu.</p>
   </div>
 
@@ -221,7 +296,7 @@
   <div class="results-container" id="results"></div>
 
   <div class="footer">
-    <strong>MEÜTF Nefroloji</strong> · Spot İdrar Analiz Algoritması<br>
+    <strong>MEÜTF Nefroloji</strong> · Eldeki Verilerle Hesap Makinesi<br>
     Klinik karar destek aracıdır — tanısal kesinlik için klinik bağlam gereklidir.
   </div>
 </div>
@@ -293,6 +368,11 @@ function calculate() {
   const s_urea=val('s_urea'), s_osm=getSOsm();
 
   let C = [], S = [];
+  // Hesaplanan değerleri ayırıcı tanı için topluyoruz
+  let ctx = {
+    inputs: { u_na, u_k, u_ca, u_cr, u_alb, u_prot, u_urea, u_osm, s_na, s_k, s_cr, s_urea, s_osm },
+    derived: {} // hesaplanan oranlar burada
+  };
 
   // --- Spot değer yorumları ---
   if (u_na !== null) {
@@ -328,7 +408,7 @@ function calculate() {
   // --- Oranlar ---
   // ACR
   if(u_alb!==null&&u_cr!==null){
-    const v=(u_alb*100)/u_cr;let st,b,d,dh='';
+    const v=(u_alb*100)/u_cr;ctx.derived.acr=v;let st,b,d,dh='';
     if(v<30){st='Normal';b='normal';d='ACR < 30 mg/g → Normal albuminüri';}
     else if(v<=300){st='Mikroalbuminüri';b='low';d='ACR 30–300 mg/g → Mikroalbuminüri (A2)';}
     else{st='Makroalbuminüri';b='high';d='ACR > 300 mg/g → Makroalbuminüri (A3)';}
@@ -339,7 +419,7 @@ function calculate() {
 
   // PCR
   if(u_prot!==null&&u_cr!==null){
-    const v=(u_prot*1000)/u_cr;let st,b,d;
+    const v=(u_prot*1000)/u_cr;ctx.derived.pcr=v;let st,b,d;
     if(v<150){st='Normal';b='normal';d='PCR < 150 mg/g → Normal';}
     else if(v<=500){st='Hafif proteinüri';b='low';d='PCR 150–500 mg/g → Hafif';}
     else if(v<=3500){st='Orta proteinüri';b='low';d='PCR 500–3500 mg/g → Orta';}
@@ -350,7 +430,7 @@ function calculate() {
 
   // Ca/Cr
   if(u_ca!==null&&u_cr!==null){
-    const v=u_ca/u_cr;let st,b,d,dh='';
+    const v=u_ca/u_cr;ctx.derived.caCr=v;let st,b,d,dh='';
     if(v<0.2){st='Normal';b='normal';d='Ca/Cr < 0.2 mg/mg → Normal (erişkin)';}
     else{st='Hiperkalsiüri';b='high';d='Ca/Cr ≥ 0.2 mg/mg → Hiperkalsiüri';}
     if(v>=0.2) dh=buildDiff('Hiperkalsiüri Nedenleri',['Hiperparatiroidi','Malignite','Sarkoidoz','Vitamin D fazlalığı','İmmobilizasyon','Loop diüretikleri','Renal taş hastalığı']);
@@ -359,21 +439,33 @@ function calculate() {
 
   // Na/Cr
   if(u_na!==null&&u_cr!==null){
-    const v=(u_na*100)/u_cr;let st,b;
+    const v=(u_na*100)/u_cr;ctx.derived.naCr=v;let st,b;
     if(v>=40&&v<=220){st='Normal aralıkta';b='normal';}else if(v<40){st='Düşük';b='low';}else{st='Yüksek';b='high';}
     C.push(card('Sodyum/Kreatinin Oranı',v.toFixed(1)+' mEq/g',st,b,'Referans: ~40–220 mEq/g','Na/Cr = UNa × 100 / UCr'));
   }
 
   // K/Cr
   if(u_k!==null&&u_cr!==null){
-    const v=(u_k*100)/u_cr;let st,b;
+    const v=(u_k*100)/u_cr;ctx.derived.kCr=v;let st,b;
     if(v>=20&&v<=60){st='Normal aralıkta';b='normal';}else if(v<20){st='Düşük';b='low';}else{st='Yüksek';b='high';}
     C.push(card('Potasyum/Kreatinin Oranı',v.toFixed(1)+' mEq/g',st,b,'Referans: ~20–60 mEq/g','K/Cr = UK × 100 / UCr'));
   }
 
+  // BUN/Cr oranı (azotemi ayırıcı tanı için kritik)
+  if(s_urea!==null&&s_cr!==null){
+    const bun=s_urea/2.14;
+    const ratio=bun/s_cr;
+    ctx.derived.bunCrRatio=ratio; ctx.derived.bun=bun;
+    let st,b,d;
+    if(ratio<10){st='Düşük';b='low';d='BUN/Cr < 10 → İntrinsik renal hastalık, düşük protein alımı, hemodiyaliz, gebelik, SIADH';}
+    else if(ratio<=20){st='Normal';b='normal';d='BUN/Cr 10–20 → Normal aralık';}
+    else{st='Yüksek';b='high';d='BUN/Cr > 20 → Prerenal azotemi, postrenal obstrüksiyon, GİS kanaması, yüksek protein alımı, steroid';}
+    C.push(card('BUN/Kreatinin Oranı',ratio.toFixed(1)+'   (BUN: '+bun.toFixed(0)+' mg/dL)',st,b,d,'BUN = SÜre / 2.14 → BUN / SCr'));
+  }
+
   // FENa
   if(u_na!==null&&s_cr!==null&&s_na!==null&&u_cr!==null){
-    const v=((u_na*s_cr)/(s_na*u_cr))*100;let st,b,d;
+    const v=((u_na*s_cr)/(s_na*u_cr))*100;ctx.derived.fena=v;let st,b,d;
     if(v<1){st='Prerenal';b='low';d='FENa < %1 → Prerenal (dehidratasyon, KY, hepatorenal)';}
     else if(v<=2){st='Gri alan';b='info';d='FENa %1–2 → Gri alan — klinik bağlam gerekli';}
     else{st='İntrinsik (ATN)';b='high';d='FENa > %2 → ATN veya intrinsik renal neden';}
@@ -385,7 +477,7 @@ function calculate() {
 
   // FEUrea
   if(u_urea!==null&&s_urea!==null&&s_cr!==null&&u_cr!==null){
-    const v=((u_urea*s_cr)/(s_urea*u_cr))*100;let st,b,d;
+    const v=((u_urea*s_cr)/(s_urea*u_cr))*100;ctx.derived.feurea=v;let st,b,d;
     if(v<35){st='Prerenal';b='low';d='FEÜre < %35 → Prerenal (diüretik altında FENa yerine tercih edilir)';}
     else if(v<=50){st='Gri alan';b='info';d='FEÜre %35–50 → Gri alan';}
     else{st='İntrinsik (ATN)';b='high';d='FEÜre > %50 → ATN / intrinsik renal neden';}
@@ -398,7 +490,7 @@ function calculate() {
   // TTKG
   if(u_k!==null&&s_k!==null&&u_osm!==null&&s_osm!==null){
     if(u_osm>s_osm){
-      const v=(u_k/s_k)/(u_osm/s_osm);let st,b,d;
+      const v=(u_k/s_k)/(u_osm/s_osm);ctx.derived.ttkg=v;let st,b,d;
       if(s_k<3.5){
         if(v<3){st='Ekstrarenal kayıp';b='low';d='Hipokalemi + TTKG < 3 → Ekstrarenal K kaybı (GİS, yetersiz alım)';}
         else{st='Renal kayıp';b='high';d='Hipokalemi + TTKG > 3 → Renal K kaybı (aldosteronizm, diüretik, RTA, Bartter/Gitelman)';}
@@ -416,14 +508,378 @@ function calculate() {
     if(m.length>0&&m.length<4) S.push(sug('TTKG Hesaplanabilir','<strong>'+m.join(', ')+'</strong> girerseniz <strong>TTKG</strong> hesaplanabilir → Hipo/hiperkalemi ayırıcı tanı.'));
   }
 
+  // ===== AYIRICI TANI SENTEZLEYİCİ =====
+  // Hesaplanmış değerleri kombinasyon olarak değerlendirir
+  let DX = synthesizeDifferentials(ctx);
+
   // Render
   const el=document.getElementById('results');
-  if(!C.length&&!S.length){el.innerHTML='<div class="suggestion-card"><h4>⚠️ Parametre girilmedi</h4><p>Lütfen en az bir parametre girin.</p></div>';return;}
+  if(!C.length&&!S.length&&!DX.length){el.innerHTML='<div class="suggestion-card"><h4>⚠️ Parametre girilmedi</h4><p>Lütfen en az bir parametre girin.</p></div>';return;}
   let o='';
   if(C.length) o+='<div class="results-title">📊 Sonuçlar</div>'+C.join('');
+  if(DX.length) o+='<div class="results-title" style="margin-top:24px">🧠 Ayırıcı Tanı Sentezi</div>'+DX.join('');
   if(S.length) o+='<div class="results-title" style="margin-top:24px">💡 Öneriler</div>'+S.join('');
   el.innerHTML=o;
   el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ===== AYIRICI TANI MOTORU =====
+function synthesizeDifferentials(ctx) {
+  const i = ctx.inputs, d = ctx.derived;
+  let patterns = [];
+
+  // ----- 1. AKI AYIRICI TANI: Prerenal vs ATN vs Postrenal -----
+  if (d.fena !== undefined || d.feurea !== undefined || d.bunCrRatio !== undefined) {
+    let pattern = '';
+    let dxList = [];
+    let nextStep = '';
+
+    // Prerenal pattern
+    const prerenalSigns = [
+      d.fena !== undefined && d.fena < 1,
+      d.feurea !== undefined && d.feurea < 35,
+      d.bunCrRatio !== undefined && d.bunCrRatio > 20,
+      i.u_na !== null && i.u_na < 20
+    ].filter(Boolean).length;
+
+    // ATN/intrinsik pattern
+    const atnSigns = [
+      d.fena !== undefined && d.fena > 2,
+      d.feurea !== undefined && d.feurea > 50,
+      d.bunCrRatio !== undefined && d.bunCrRatio < 15 && d.bunCrRatio >= 10,
+      i.u_na !== null && i.u_na > 40
+    ].filter(Boolean).length;
+
+    if (prerenalSigns >= 2) {
+      pattern = '<strong>Prerenal pattern</strong> — ';
+      const parts = [];
+      if (d.fena !== undefined && d.fena < 1) parts.push('FENa <%1');
+      if (d.feurea !== undefined && d.feurea < 35) parts.push('FEÜre <%35');
+      if (d.bunCrRatio !== undefined && d.bunCrRatio > 20) parts.push('BUN/Cr >20');
+      if (i.u_na !== null && i.u_na < 20) parts.push('UNa <20');
+      pattern += parts.join(', ');
+
+      dxList = [
+        { name: 'Hipovolemi / Dehidratasyon', detail: 'Volüm replasmanı sonrası kreatinin düzelmesi beklenir. Klinik muayene (turgor, kan basıncı, JVP) ve volüm yanıtı.', priority: 'high' },
+        { name: 'Konjestif kalp yetmezliği', detail: 'Düşük kardiyak debi → renal hipoperfüzyon. Volüm yüklü ama efektif dolaşım yetersiz. Kardiyorenal sendrom.', priority: 'high' },
+        { name: 'Siroz / Hepatorenal sendrom', detail: 'Splanknik vazodilatasyon → renal vazokonstrüksiyon. Albümin + terlipresin/midodrin yanıtı.', priority: 'mid' },
+        { name: 'Renal arter stenozu', detail: 'ACEi/ARB başlanmasından sonra ani Cr artışı tipik. Doppler USG.', priority: 'mid' },
+        { name: 'NSAID / ACEi-ARB ilişkili', detail: 'Glomerüler hemodinamik bozukluk. İlaç sorgulaması.', priority: 'mid' }
+      ];
+      nextStep = 'Volüm durumu değerlendir → fizik muayene, NT-proBNP, eko (gerekirse). Volüm replasmanına yanıt değerlendir. Nefrotoksik ilaçları gözden geçir.';
+      patterns.push(buildSynthesis('🔥 Akut Böbrek Hasarı — Prerenal Pattern', pattern, dxList, nextStep));
+    } else if (atnSigns >= 2) {
+      pattern = '<strong>İntrinsik renal pattern</strong> — ';
+      const parts = [];
+      if (d.fena !== undefined && d.fena > 2) parts.push('FENa >%2');
+      if (d.feurea !== undefined && d.feurea > 50) parts.push('FEÜre >%50');
+      if (d.bunCrRatio !== undefined && d.bunCrRatio < 15) parts.push('BUN/Cr <15');
+      if (i.u_na !== null && i.u_na > 40) parts.push('UNa >40');
+      pattern += parts.join(', ');
+
+      dxList = [
+        { name: 'Akut Tübüler Nekroz (ATN)', detail: 'İskemik (uzamış prerenal) veya nefrotoksik (kontrast, aminoglikozid, sisplatin, mioglobinüri). İdrar mikroskopisinde "muddy brown cast".', priority: 'high' },
+        { name: 'Akut İnterstisyel Nefrit (AIN)', detail: 'İlaç ilişkili (NSAID, PPI, antibiyotik), enfeksiyon. Eozinofili, eozinofilüri, döküntü, ateş üçlüsü. İdrarda WBC cast.', priority: 'high' },
+        { name: 'Glomerülonefrit', detail: 'Aktif idrar sedimenti (RBC cast, dismorfik eritrosit), proteinüri, hipertansiyon. ANA, ANCA, anti-GBM, kompleman, kriyoglobulin paneli.', priority: 'mid' },
+        { name: 'Vasküler nedenler', detail: 'Atheroembolik hastalık (kolesterol embolisi, eozinofili + livedo), TMA (HUS/TTP, şistositler, trombositopeni).', priority: 'mid' }
+      ];
+      nextStep = 'İdrar mikroskopisi (cast, eritrosit morfolojisi), tam idrar tetkiki, idrar eozinofili, ilaç sorgulaması, gerekirse böbrek biyopsisi düşün.';
+      patterns.push(buildSynthesis('🔥 Akut Böbrek Hasarı — İntrinsik Renal Pattern', pattern, dxList, nextStep));
+    } else if ((d.fena !== undefined && d.fena >= 1 && d.fena <= 2) || (d.feurea !== undefined && d.feurea >= 35 && d.feurea <= 50)) {
+      pattern = '<strong>Gri alan</strong> — ';
+      const parts = [];
+      if (d.fena !== undefined) parts.push('FENa %' + d.fena.toFixed(2));
+      if (d.feurea !== undefined) parts.push('FEÜre %' + d.feurea.toFixed(2));
+      pattern += parts.join(', ');
+
+      dxList = [
+        { name: 'Erken/iyileşmekte olan ATN', detail: 'Tübüler hasarın resüpere olduğu dönem. FENa kademeli artar.', priority: 'mid' },
+        { name: 'Geç/transfer olmuş prerenal', detail: 'Uzamış prerenal hipoperfüzyon, ATN\'e dönüşüm sürecinde.', priority: 'mid' },
+        { name: 'Sepsis-ilişkili AKI', detail: 'Sepsiste FENa düşük olabilir (paradoksal), klinik bağlam belirleyici.', priority: 'mid' },
+        { name: 'Kontrast nefropatisi (erken)', detail: 'Genellikle FENa <%1, ATN\'den ayrımı zor.', priority: 'low' },
+        { name: 'Glomerülonefrit (erken)', detail: 'GN\'de de FENa <%1 olabilir.', priority: 'low' }
+      ];
+      nextStep = 'Klinik bağlam belirleyici. Diüretik kullanımı varsa FEÜre tercih et. İdrar sedimenti ve seri Cr takibi.';
+      patterns.push(buildSynthesis('⚖️ Akut Böbrek Hasarı — Gri Alan', pattern, dxList, nextStep));
+    }
+  }
+
+  // ----- 2. HİPOKALEMİ AYIRICI TANI -----
+  if (i.s_k !== null && i.s_k < 3.5) {
+    let pattern = '<strong>Hipokalemi (SK ' + i.s_k + ')</strong>';
+    let dxList = [];
+    let nextStep = '';
+
+    // Renal kayıp mı?
+    const renalLossSigns = [
+      d.ttkg !== undefined && d.ttkg > 3,
+      d.kCr !== undefined && d.kCr > 15,
+      i.u_k !== null && i.u_k > 20
+    ].filter(Boolean).length;
+
+    const extrarenalSigns = [
+      d.ttkg !== undefined && d.ttkg < 3,
+      d.kCr !== undefined && d.kCr < 13,
+      i.u_k !== null && i.u_k < 15
+    ].filter(Boolean).length;
+
+    if (renalLossSigns >= 1) {
+      pattern += ' + <strong>Renal K kaybı</strong> — ';
+      const parts = [];
+      if (d.ttkg !== undefined) parts.push('TTKG ' + d.ttkg.toFixed(1));
+      if (d.kCr !== undefined) parts.push('K/Cr ' + d.kCr.toFixed(1));
+      pattern += parts.join(', ');
+
+      dxList = [
+        { name: 'Diüretik kullanımı', detail: 'Loop ve tiazid en sık. Anamnezi netleştir. UCa: tiazidde düşük, loop\'ta yüksek.', priority: 'high' },
+        { name: 'Primer hiperaldosteronizm', detail: 'Hipertansiyon + hipokalemi + metabolik alkaloz. Aldosteron/renin oranı (ARR), Conn sendromu.', priority: 'high' },
+        { name: 'Sekonder hiperaldosteronizm', detail: 'RAS, Bartter, Gitelman, RVHT. Renin yüksek.', priority: 'mid' },
+        { name: 'Bartter sendromu', detail: 'Loop diüretik benzeri tablo, hipokalsiüri yok, normal/düşük Mg, normal kan basıncı.', priority: 'mid' },
+        { name: 'Gitelman sendromu', detail: 'Tiazid benzeri tablo, hipokalsiüri (UCa düşük), hipomagnezemi.', priority: 'mid' },
+        { name: 'Tip 1/2 RTA', detail: 'Distal RTA: idrar pH > 5.5, hipokalemi + non-anyon gap MA. Proksimal: bikarbonatüri.', priority: 'mid' },
+        { name: 'Cushing sendromu', detail: 'Mineralokortikoid etki, kortizol fazlalığı.', priority: 'low' },
+        { name: 'Hipomagnezemi', detail: 'Refrakter hipokalemiye neden olur. Mg replasmanı şart.', priority: 'high' }
+      ];
+      nextStep = 'Kan basıncı + asit-baz durumu (ABG) → algoritmik yaklaşım. Mg, plazma renin/aldosteron, idrar Cl, idrar Ca/Cr.';
+    } else if (extrarenalSigns >= 1) {
+      pattern += ' + <strong>Ekstrarenal K kaybı</strong> — ';
+      const parts = [];
+      if (d.ttkg !== undefined) parts.push('TTKG ' + d.ttkg.toFixed(1));
+      if (d.kCr !== undefined) parts.push('K/Cr ' + d.kCr.toFixed(1));
+      pattern += parts.join(', ');
+
+      dxList = [
+        { name: 'Diare / GİS K kaybı', detail: 'Sekretuar veya osmotik diare, laksatif kötüye kullanımı. Non-AG MA olabilir.', priority: 'high' },
+        { name: 'Kusma / NG drenaj', detail: 'Genelde hipokloremik metabolik alkaloz, sekonder renal K kaybına da yol açar.', priority: 'mid' },
+        { name: 'Yetersiz K alımı', detail: 'Kronik malnütrisyon, anoreksia, alkolizm. Genellikle eşlik eden faktörlerle birlikte.', priority: 'mid' },
+        { name: 'İntrasellüler shift', detail: 'İnsülin, β2-agonist, alkalemi, refeeding sendromu, hipokalemik periyodik paralizi.', priority: 'mid' }
+      ];
+      nextStep = 'Anamnezde ishal/kusma/ilaç sorgulaması. ABG, klor, asit-baz durumu.';
+    } else {
+      pattern += ' — TTKG/K_Cr verisi eksik';
+      dxList = [
+        { name: 'Kayıp lokalizasyonu belirsiz', detail: 'Renal vs ekstrarenal ayrımı için TTKG veya idrar K/Cr gerekli.', priority: 'mid' }
+      ];
+      nextStep = 'TTKG için idrar/serum osmolalite hesaplaması veya direkt idrar K/Cr ölçümü öneriliyor.';
+    }
+    patterns.push(buildSynthesis('⚡ Hipokalemi Ayırıcı Tanı', pattern, dxList, nextStep));
+  }
+
+  // ----- 3. HİPERKALEMİ AYIRICI TANI -----
+  if (i.s_k !== null && i.s_k > 5.0) {
+    let pattern = '<strong>Hiperkalemi (SK ' + i.s_k + ')</strong>';
+    let dxList = [];
+    let nextStep = '';
+
+    if (d.ttkg !== undefined) {
+      if (d.ttkg < 7) {
+        pattern += ' + <strong>Yetersiz renal atılım (TTKG ' + d.ttkg.toFixed(1) + ')</strong>';
+        dxList = [
+          { name: 'Hipoaldosteronizm (primer)', detail: 'Addison hastalığı, adrenal yetmezlik. Eşlik eden hiponatremi, hipotansiyon.', priority: 'high' },
+          { name: 'Hiporeninemik hipoaldosteronizm (Tip 4 RTA)', detail: 'DM, kronik tübülointerstisyel hastalık, en sık nedendir. Hafif hiperkloremik MA.', priority: 'high' },
+          { name: 'İlaç ilişkili (ACEi, ARB, MRA, kalsinörin inh)', detail: 'En sık iyatrojenik neden. Spironolakton, eplerenon, NSAID, trimetoprim, heparin.', priority: 'high' },
+          { name: 'Tip 1 psödohipoaldosteronizm', detail: 'MR mutasyonu veya direnci. Nadir.', priority: 'low' },
+          { name: 'Tubüler hasara bağlı (obstrüktif uropati, lupus, HIV, transplant red)', detail: 'Distal nefron hasarı.', priority: 'mid' }
+        ];
+        nextStep = 'İlaç sorgulaması (ACEi/ARB/MRA/NSAID/TMP), aldosteron + renin düzeyi, glukoz/HbA1c (DM), kortizol/ACTH (Addison şüphesi).';
+      } else {
+        pattern += ' + <strong>Uygun renal yanıt (TTKG ' + d.ttkg.toFixed(1) + ')</strong> — ekstrarenal neden';
+        dxList = [
+          { name: 'Aşırı K alımı', detail: 'Diyet, IV K, ezilmiş tabletler, K-tutucu suplementler. GFR azalmışsa daha kritik.', priority: 'high' },
+          { name: 'Hücresel salınım — rabdomiyoliz', detail: 'CK ↑, mioglobinüri, AKI riski.', priority: 'high' },
+          { name: 'Tümör lizis sendromu', detail: 'Hiper-K + hiper-P + hiperürisemi + hipokalsemi + AKI. Onkoloji bağlamı.', priority: 'high' },
+          { name: 'Hücresel salınım — hemoliz', detail: 'LDH ↑, indirekt bilirubin ↑, haptoglobin ↓.', priority: 'mid' },
+          { name: 'Asidoz ilişkili shift', detail: 'Her 0.1 pH düşüşü → K ~0.6 mEq/L artar. DKA, laktik asidoz.', priority: 'mid' },
+          { name: 'İnsülin eksikliği', detail: 'DKA, hiperglisemi → ekstrasellüler kayma.', priority: 'mid' },
+          { name: 'Psödo-hiperkalemi', detail: 'Hemoliz (örnek alımı), trombositoz, lökositoz. Plazma K ile doğrula.', priority: 'low' }
+        ];
+        nextStep = 'CK, LDH, hemoliz markırları, ABG, glukoz, P, Ca, ürik asit. Hücresel salınım nedenleri ekarte edilmeli.';
+      }
+    } else {
+      pattern += ' — TTKG hesabı yapılamadı';
+      dxList = [
+        { name: 'TTKG verisi gerekli', detail: 'Renal vs ekstrarenal hiperkalemi ayrımı için.', priority: 'mid' }
+      ];
+      nextStep = 'İdrar/serum osmolalite ve K düzeylerini gir → TTKG hesaplanır.';
+    }
+    patterns.push(buildSynthesis('⚡ Hiperkalemi Ayırıcı Tanı', pattern, dxList, nextStep));
+  }
+
+  // ----- 4. HİPONATREMİ DEĞERLENDİRMESİ -----
+  if (i.s_na !== null && i.s_na < 135) {
+    let pattern = '<strong>Hiponatremi (SNa ' + i.s_na + ')</strong>';
+    let dxList = [];
+    let nextStep = '';
+
+    // Hipotonik hiponatremi (SOsm < 275)
+    if (i.s_osm !== null && i.s_osm < 275) {
+      pattern += ' — <strong>Hipotonik (SOsm ' + i.s_osm.toFixed(0) + ')</strong>';
+
+      // UNa < 20 → ekstrarenal kayıp veya efektif volüm azalması
+      if (i.u_na !== null && i.u_na < 20) {
+        pattern += ', UNa düşük (<20) → ekstrarenal/efektif hipovolemi';
+        dxList = [
+          { name: 'Hipovolemik (ekstrarenal kayıp)', detail: 'Kusma, ishal, terleme, üçüncü boşluğa kayıp.', priority: 'high' },
+          { name: 'Kalp yetmezliği', detail: 'Efektif dolaşım azlığı + ADH stimülasyonu. Volüm yüklü görüntü.', priority: 'high' },
+          { name: 'Siroz / asit', detail: 'Splanknik vazodilatasyon → ADH ↑.', priority: 'high' },
+          { name: 'Nefrotik sendrom', detail: 'Düşük serum albümin → efektif volüm ↓.', priority: 'mid' }
+        ];
+      }
+      // UNa > 20 → renal kayıp veya SIADH
+      else if (i.u_na !== null && i.u_na > 20) {
+        pattern += ', UNa yüksek (>20)';
+        dxList = [
+          { name: 'SIADH', detail: 'Övolemik, UOsm > 100, idrar konsantre, ürik asit ↓. CNS, akciğer, ilaç (SSRI, karbamazepin) etyolojisi.', priority: 'high' },
+          { name: 'Diüretik (özellikle tiazid)', detail: 'Tiazid → ADH-bağımsız serbest su tutulumu. Yaşlılarda klasik.', priority: 'high' },
+          { name: 'Adrenal yetmezlik', detail: 'Kortizol eksikliği → ADH ↑. Hiperkalemi eşlik eder.', priority: 'mid' },
+          { name: 'Tuz kaybeden nefropati', detail: 'Tübüler disfonksiyon, intersisyel nefrit. Hipovolemik klinik.', priority: 'mid' },
+          { name: 'Hipotiroidi (myxödem)', detail: 'Ağır hipotiroidizmde hiponatremi.', priority: 'low' },
+          { name: 'Serebral tuz kaybı (CSW)', detail: 'SAH/intrakranial patoloji + hipovolemi. SIADH\'ten ayrımı zor — volüm durumu belirleyici.', priority: 'mid' }
+        ];
+      } else {
+        dxList = [
+          { name: 'UNa girilirse ayırıcı tanı netleşir', detail: 'UNa < 20: ekstrarenal/efektif hipovolemi; UNa > 20: SIADH, diüretik, adrenal yetm., CSW.', priority: 'mid' }
+        ];
+      }
+      nextStep = 'Volüm durumu (klinik) + UOsm + ürik asit + TFT + ACTH-kortizol. Tedavi düzeltme hızı: kronikse < 8 mEq/24sa.';
+    } else {
+      pattern += ' — tonisite belirsiz, SOsm gerekli';
+      dxList = [
+        { name: 'Pseudohyponatremia', detail: 'Hiperlipidemi, hiperproteinemi (MM). SOsm normal.', priority: 'low' },
+        { name: 'Hiperglisemi → translocational', detail: 'Glukoz her 100 mg/dL ↑ → SNa ~1.6-2.4 ↓. SOsm ↑.', priority: 'high' },
+        { name: 'Hipotonik hiponatremi', detail: 'SOsm < 275 olduğu doğrulanmalı.', priority: 'high' }
+      ];
+      nextStep = 'Serum osmolalite hesabı ve glukoz/lipid/protein değerlendirmesi.';
+    }
+    patterns.push(buildSynthesis('💧 Hiponatremi Ayırıcı Tanı', pattern, dxList, nextStep));
+  }
+
+  // ----- 5. HİPERNATREMİ -----
+  if (i.s_na !== null && i.s_na > 145) {
+    let pattern = '<strong>Hipernatremi (SNa ' + i.s_na + ')</strong>';
+    let dxList = [];
+    let nextStep = '';
+
+    if (i.u_osm !== null) {
+      if (i.u_osm > 700) {
+        pattern += ', UOsm yüksek (' + i.u_osm.toFixed(0) + ') → uygun renal cevap';
+        dxList = [
+          { name: 'Yetersiz su alımı', detail: 'Yaşlı, demanslı, bilinç kapalı hastalar. En sık neden.', priority: 'high' },
+          { name: 'Ekstrarenal su kaybı', detail: 'İnsensible kayıp, terleme, GİS kayıp.', priority: 'high' },
+          { name: 'Hipertonik sıvı yüklenmesi', detail: 'İatrojenik, hipertonik salin, NaHCO3.', priority: 'mid' }
+        ];
+      } else if (i.u_osm < 300) {
+        pattern += ', UOsm düşük (' + i.u_osm.toFixed(0) + ') → DI patterni';
+        dxList = [
+          { name: 'Santral diabetes insipidus', detail: 'ADH eksikliği. dDAVP testine yanıt verir. Travma, cerrahi, tümör, idiyopatik.', priority: 'high' },
+          { name: 'Nefrojenik diabetes insipidus', detail: 'ADH direnci. Lityum, hiperkalsemi, hipokalemi, kalıtsal. dDAVP yanıtsız.', priority: 'high' },
+          { name: 'Gestasyonel DI', detail: 'Plasental vazopressinaz. Gebelik bağlamı.', priority: 'low' }
+        ];
+      } else {
+        pattern += ', UOsm orta (' + i.u_osm.toFixed(0) + ')';
+        dxList = [
+          { name: 'Parsiyel DI', detail: 'Parsiyel ADH eksikliği veya direnci.', priority: 'high' },
+          { name: 'Osmotik diürez', detail: 'Glukoz, mannitol, üre yüklenmesi. UOsm orta-yüksek, idrar Na değişken.', priority: 'high' }
+        ];
+      }
+      nextStep = 'Su deprivasyon testi + dDAVP yanıtı. Lityum, kalsiyum, K düzeyleri (NDI etyolojisi).';
+    } else {
+      pattern += ' — UOsm gerekli';
+      nextStep = 'İdrar osmolalite hesaplaması (UNa + UÜre + UGlukoz girilirse otomatik) ayırıcı tanı için zorunludur.';
+      dxList = [{ name: 'UOsm gerekli', detail: 'Hipernatremi etyolojisi için renal konsantrasyon kapasitesi belirlenmeli.', priority: 'mid' }];
+    }
+    patterns.push(buildSynthesis('🔥 Hipernatremi Ayırıcı Tanı', pattern, dxList, nextStep));
+  }
+
+  // ----- 6. PROTEİNÜRİ KARAKTERİZASYONU -----
+  if (d.acr !== undefined || d.pcr !== undefined) {
+    if ((d.pcr !== undefined && d.pcr > 3500) || (d.acr !== undefined && d.acr > 2200)) {
+      const pattern = '<strong>Nefrotik düzey proteinüri</strong> — ' +
+                      (d.pcr !== undefined ? 'PCR ' + d.pcr.toFixed(0) + ' mg/g' : '') +
+                      (d.acr !== undefined ? (d.pcr !== undefined ? ', ' : '') + 'ACR ' + d.acr.toFixed(0) + ' mg/g' : '');
+      const dxList = [
+        { name: 'Diyabetik nefropati', detail: 'En sık neden. Uzun süreli DM, retinopati eşlik eder. Klasik tablo.', priority: 'high' },
+        { name: 'Membranöz nefropati', detail: 'Erişkin primer NS\'nin en sık nedeni. Anti-PLA2R (%70-80), THSD7A. Sekonder: HBV, lupus, malignite, ilaç.', priority: 'high' },
+        { name: 'FSGS', detail: 'Genç-orta yaş, siyah ırkta sık. Primer (apolipoprotein L1) veya sekonder (HIV, obezite, reflü, herediter).', priority: 'high' },
+        { name: 'Minimal değişiklik hastalığı (MDH)', detail: 'Çocukta en sık. Erişkinde NSAID, lenfoma ile.', priority: 'mid' },
+        { name: 'Membranoproliferatif GN / C3 glomerulopathy', detail: 'Düşük kompleman, paraprotein, kompleman regülasyon defekti. Genetik (CFH, CFI).', priority: 'mid' },
+        { name: 'Amiloidoz / Light chain dep. dis.', detail: 'AL: MM, plazma hücreli diskrazi. AA: kronik inflamasyon.', priority: 'mid' },
+        { name: 'Lupus nefriti', detail: 'Sınıf V (membranöz) veya proliferatif sınıflar. ANA, anti-dsDNA, kompleman.', priority: 'mid' }
+      ];
+      const nextStep = 'Serum albümin, lipid, ödem değerlendirmesi. Sekonder neden taraması: ANA, anti-dsDNA, C3/C4, anti-PLA2R, HBV/HCV/HIV, SPEP/IFE, kappa/lambda. Böbrek biyopsisi endike.';
+      patterns.push(buildSynthesis('🧪 Nefrotik Düzey Proteinüri', pattern, dxList, nextStep));
+    } else if ((d.pcr !== undefined && d.pcr >= 500 && d.pcr <= 3500) || (d.acr !== undefined && d.acr > 300 && d.acr <= 2200)) {
+      const pattern = '<strong>Orta düzey proteinüri / Makroalbuminüri</strong>';
+      const dxList = [
+        { name: 'Diyabetik nefropati (overt)', detail: 'Uzun süreli DM + retinopati genelde mevcut.', priority: 'high' },
+        { name: 'Hipertansif nefroskleroz', detail: 'Uzun süreli HT öyküsü, hafif-orta proteinüri.', priority: 'high' },
+        { name: 'Glomerülonefrit', detail: 'Aktif sediment varsa GN düşün — IgA, lupus, MPGN, postenfeksiyöz.', priority: 'mid' },
+        { name: 'FSGS sekonder', detail: 'Obezite, reflü, hipertansiyon ilişkili.', priority: 'mid' }
+      ];
+      const nextStep = 'İdrar mikroskopisi (aktif sediment?), HbA1c, kompleman, ANA, böbrek USG, kan basıncı kontrolü.';
+      patterns.push(buildSynthesis('🧪 Orta Düzey Proteinüri', pattern, dxList, nextStep));
+    } else if (d.acr !== undefined && d.acr >= 30 && d.acr <= 300) {
+      const pattern = '<strong>Mikroalbuminüri (A2)</strong> — ACR ' + d.acr.toFixed(1) + ' mg/g';
+      const dxList = [
+        { name: 'Diyabetik nefropati (erken)', detail: 'DM\'de en erken belirteç. Yıllık taranır.', priority: 'high' },
+        { name: 'Hipertansif böbrek hastalığı', detail: 'HT seyrinde hafif albuminüri tipik.', priority: 'high' },
+        { name: 'Kardiyovasküler risk göstergesi', detail: 'Mikroalbuminüri başlı başına bağımsız KV risk faktörü.', priority: 'mid' },
+        { name: 'Geçici nedenler', detail: 'Egzersiz, ateş, enfeksiyon, kalp yetmezliği, ortostatik proteinüri (genç).', priority: 'low' }
+      ];
+      const nextStep = 'En az 3 ay içinde 2-3 ölçüm tekrarı (geçici nedenleri ekarte). RAS blokajı endikasyonu, glisemi ve KB optimizasyonu.';
+      patterns.push(buildSynthesis('🧪 Mikroalbuminüri', pattern, dxList, nextStep));
+    }
+  }
+
+  // ----- 7. HİPERKALSİÜRİ -----
+  if (d.caCr !== undefined && d.caCr >= 0.2) {
+    const pattern = '<strong>Hiperkalsiüri (Ca/Cr ' + d.caCr.toFixed(2) + ')</strong>';
+    const dxList = [
+      { name: 'Primer hiperparatiroidi', detail: 'Yüksek Ca + yüksek/uygunsuz normal PTH. Renal taş, kemik hastalığı.', priority: 'high' },
+      { name: 'İdiopatik hiperkalsiüri', detail: 'En sık taş nedeni. Normal serum Ca, ailesel. Absorptive vs renal vs resorptive alt tipler.', priority: 'high' },
+      { name: 'Malignite (humoral, osteolitik)', detail: 'PTHrP, kemik metastazları, multipl myelom, lenfoma.', priority: 'high' },
+      { name: 'Vitamin D toksisitesi', detail: '25(OH)D yüksek. Granülomatöz hastalıklarda (sarkoidoz) 1,25(OH)2D artar.', priority: 'mid' },
+      { name: 'Sarkoidoz / granülomatöz hastalık', detail: 'Aktive makrofajlardan 1-α hidroksilaz. ACE düzeyi.', priority: 'mid' },
+      { name: 'Loop diüretikleri', detail: 'Henle\'de Ca reabsorpsiyonunu inhibe eder.', priority: 'mid' },
+      { name: 'İmmobilizasyon', detail: 'Uzun yatış, paralizi, genç hastalarda kemik resorpsiyonu.', priority: 'low' },
+      { name: 'Distal RTA (tip 1)', detail: 'Asidoz + hiperkalsiüri + nefrokalsinoz/nefrolitiazis.', priority: 'mid' }
+    ];
+    const nextStep = 'Serum Ca, PTH, 25(OH)D, 1,25(OH)2D, fosfor, ALP. Renal USG (taş, nefrokalsinoz). 24-saatlik idrar Ca tercihen.';
+    patterns.push(buildSynthesis('🦴 Hiperkalsiüri Ayırıcı Tanı', pattern, dxList, nextStep));
+  }
+
+  // ----- 8. PROTEİNÜRİ + AKTIF SEDIMENT KOMBINASYONU (RPGN düşündüren) -----
+  if (d.pcr !== undefined && d.pcr > 1000 && d.fena !== undefined && d.fena > 1) {
+    const pattern = '<strong>Proteinüri + AKI kombinasyonu</strong> — PCR ' + d.pcr.toFixed(0) + ' + FENa %' + d.fena.toFixed(2);
+    const dxList = [
+      { name: 'Hızlı ilerleyen GN (RPGN)', detail: 'ANCA-vasküliti (GPA, MPA), anti-GBM, lupus nefriti, immün kompleks. Aktif idrar sediment + AKI + proteinüri.', priority: 'high' },
+      { name: 'Akut postenfeksiyöz GN', detail: 'Streptokok sonrası, kompleman düşük, ASO yüksek.', priority: 'mid' },
+      { name: 'TMA (HUS/TTP)', detail: 'Mikroanjiopatik hemolitik anemi + trombositopeni + AKI. Şistositler.', priority: 'high' },
+      { name: 'Akut interstisyel nefrit (proteinüri ile)', detail: 'NSAID-ilişkili AIN bazen 1-3 g/gün proteinüri yapar.', priority: 'mid' }
+    ];
+    const nextStep = 'ACİL böbrek biyopsisi düşün! ANCA, anti-GBM, ANA, anti-dsDNA, kompleman, hepatit serolojisi. Aktif sediment doğrula. Steroid + immünsupresif eşik düşük.';
+    patterns.push(buildSynthesis('🚨 Proteinüri + AKI — RPGN/Glomerüler Hasar Dışla', pattern, dxList, nextStep));
+  }
+
+  return patterns;
+}
+
+function buildSynthesis(title, patternText, dxList, nextStep) {
+  let h = '<div class="synthesis-card">';
+  h += '<div class="synthesis-header"><div class="synthesis-icon">🧠</div><div class="synthesis-title">' + title + '</div></div>';
+  h += '<div class="synthesis-pattern">' + patternText + '</div>';
+  h += '<div class="dx-list">';
+  dxList.forEach(dx => {
+    const pcls = dx.priority === 'high' ? 'priority-high' : dx.priority === 'mid' ? 'priority-mid' : 'priority-low';
+    h += '<div class="dx-item ' + pcls + '">';
+    h += '<div class="dx-item-name">' + dx.name + '</div>';
+    h += '<div class="dx-item-detail">' + dx.detail + '</div>';
+    h += '</div>';
+  });
+  h += '</div>';
+  if (nextStep) h += '<div class="next-step"><strong>→ Sonraki adım:</strong> ' + nextStep + '</div>';
+  h += '</div>';
+  return h;
 }
 
 function card(name,value,status,bType,detail,formula,extra){
