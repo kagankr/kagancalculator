@@ -578,7 +578,7 @@ function synthesizeDifferentials(ctx) {
       pattern += parts.join(', ');
 
       dxList = [
-        { name: 'Akut Tübüler Nekroz (ATN)', detail: 'İskemik (uzamış prerenal) veya nefrotoksik (kontrast, aminoglikozid, sisplatin, mioglobinüri). İdrar mikroskopisinde "muddy brown cast".', priority: 'high' },
+        { name: 'Akut Tübüler Nekroz (ATN)', detail: 'İskemik (uzamış prerenal) veya nefrotoksik (kontrast, aminoglikozid, sisplatin, myoglobinüri). İdrar mikroskopisinde "muddy brown cast".', priority: 'high' },
         { name: 'Akut İnterstisyel Nefrit (AIN)', detail: 'İlaç ilişkili (NSAID, PPI, antibiyotik), enfeksiyon. Eozinofili, eozinofilüri, döküntü, ateş üçlüsü. İdrarda WBC cast.', priority: 'high' },
         { name: 'Glomerülonefrit', detail: 'Aktif idrar sedimenti (RBC cast, dismorfik eritrosit), proteinüri, hipertansiyon. ANA, ANCA, anti-GBM, kompleman, kriyoglobulin paneli.', priority: 'mid' },
         { name: 'Vasküler nedenler', detail: 'Atheroembolik hastalık (kolesterol embolisi, eozinofili + livedo), TMA (HUS/TTP, şistositler, trombositopeni).', priority: 'mid' }
@@ -599,7 +599,7 @@ function synthesizeDifferentials(ctx) {
         { name: 'Kontrast nefropatisi (erken)', detail: 'Genellikle FENa <%1, ATN\'den ayrımı zor.', priority: 'low' },
         { name: 'Glomerülonefrit (erken)', detail: 'GN\'de de FENa <%1 olabilir.', priority: 'low' }
       ];
-      nextStep = 'Klinik bağlam belirleyici. Diüretik kullanımı varsa FEÜre tercih et. İdrar sedimenti ve seri Cr takibi.';
+      nextStep = 'Diüretik altında FEÜre tercih edilmeli. Seri kreatinin takibi yapılmalı.';
       patterns.push(buildSynthesis('⚖️ Akut Böbrek Hasarı — Gri Alan', pattern, dxList, nextStep));
     }
   }
@@ -686,7 +686,7 @@ function synthesizeDifferentials(ctx) {
         pattern += ' + <strong>Uygun renal yanıt (TTKG ' + d.ttkg.toFixed(1) + ')</strong> — ekstrarenal neden';
         dxList = [
           { name: 'Aşırı K alımı', detail: 'Diyet, IV K, ezilmiş tabletler, K-tutucu suplementler. GFR azalmışsa daha kritik.', priority: 'high' },
-          { name: 'Hücresel salınım — rabdomiyoliz', detail: 'CK ↑, mioglobinüri, AKI riski.', priority: 'high' },
+          { name: 'Hücresel salınım — rabdomiyoliz', detail: 'CK ↑, myoglobinüri, AKI riski.', priority: 'high' },
           { name: 'Tümör lizis sendromu', detail: 'Hiper-K + hiper-P + hiperürisemi + hipokalsemi + AKI. Onkoloji bağlamı.', priority: 'high' },
           { name: 'Hücresel salınım — hemoliz', detail: 'LDH ↑, indirekt bilirubin ↑, haptoglobin ↓.', priority: 'mid' },
           { name: 'Asidoz ilişkili shift', detail: 'Her 0.1 pH düşüşü → K ~0.6 mEq/L artar. DKA, laktik asidoz.', priority: 'mid' },
@@ -711,45 +711,106 @@ function synthesizeDifferentials(ctx) {
     let dxList = [];
     let nextStep = '';
 
-    // Hipotonik hiponatremi (SOsm < 275)
-    if (i.s_osm !== null && i.s_osm < 275) {
-      pattern += ' — <strong>Hipotonik (SOsm ' + i.s_osm.toFixed(0) + ')</strong>';
+    // Hesaplanan VEYA girilmiş SOsm kullan (i.s_osm zaten getSOsm() sonucu)
+    const sosm = i.s_osm;
 
-      // UNa < 20 → ekstrarenal kayıp veya efektif volüm azalması
-      if (i.u_na !== null && i.u_na < 20) {
-        pattern += ', UNa düşük (<20) → ekstrarenal/efektif hipovolemi';
+    // ===== TONISITE SINIFLAMASI =====
+    if (sosm !== null) {
+
+      // --- HİPERTONİK HİPONATREMİ (SOsm > 295) ---
+      if (sosm > 295) {
+        pattern += ' — <strong>Hipertonik (SOsm ' + sosm.toFixed(0) + ')</strong>';
         dxList = [
-          { name: 'Hipovolemik (ekstrarenal kayıp)', detail: 'Kusma, ishal, terleme, üçüncü boşluğa kayıp.', priority: 'high' },
-          { name: 'Kalp yetmezliği', detail: 'Efektif dolaşım azlığı + ADH stimülasyonu. Volüm yüklü görüntü.', priority: 'high' },
-          { name: 'Siroz / asit', detail: 'Splanknik vazodilatasyon → ADH ↑.', priority: 'high' },
-          { name: 'Nefrotik sendrom', detail: 'Düşük serum albümin → efektif volüm ↓.', priority: 'mid' }
+          { name: 'Hiperglisemi (translocational)', detail: 'Glukoz her 100 mg/dL ↑ üzerinde → SNa ~1.6–2.4 mEq/L ↓. DKA, HHS bağlamı. Glukoz düzeltildiğinde SNa normalleşir.', priority: 'high' },
+          { name: 'Mannitol / IV iyodlu kontrast', detail: 'Ekstrasellüler ozmolarite ↑ → su shifti. İatrojenik.', priority: 'high' },
+          { name: 'Maltoz (IVIG vehicle), gliserol, sorbitol', detail: 'Etkisiz osmol, ekstrasellüler hipertonisite oluşturur.', priority: 'mid' }
         ];
+        nextStep = 'Düzeltilmiş SNa hesapla: SNa + 1.6 × ((Glukoz − 100) / 100). Hiperglisemi varsa altta yatan nedeni tedavi et — sıvı + insülin ile glukoz normalleştikçe Na kendiliğinden düzelir.';
       }
-      // UNa > 20 → renal kayıp veya SIADH
-      else if (i.u_na !== null && i.u_na > 20) {
-        pattern += ', UNa yüksek (>20)';
+
+      // --- İZOTONİK HİPONATREMİ (SOsm 275-295) — Pseudohyponatremia ---
+      else if (sosm >= 275 && sosm <= 295) {
+        pattern += ' — <strong>İzotonik / Pseudohyponatremia (SOsm ' + sosm.toFixed(0) + ')</strong>';
         dxList = [
-          { name: 'SIADH', detail: 'Övolemik, UOsm > 100, idrar konsantre, ürik asit ↓. CNS, akciğer, ilaç (SSRI, karbamazepin) etyolojisi.', priority: 'high' },
-          { name: 'Diüretik (özellikle tiazid)', detail: 'Tiazid → ADH-bağımsız serbest su tutulumu. Yaşlılarda klasik.', priority: 'high' },
-          { name: 'Adrenal yetmezlik', detail: 'Kortizol eksikliği → ADH ↑. Hiperkalemi eşlik eder.', priority: 'mid' },
-          { name: 'Tuz kaybeden nefropati', detail: 'Tübüler disfonksiyon, intersisyel nefrit. Hipovolemik klinik.', priority: 'mid' },
-          { name: 'Hipotiroidi (myxödem)', detail: 'Ağır hipotiroidizmde hiponatremi.', priority: 'low' },
-          { name: 'Serebral tuz kaybı (CSW)', detail: 'SAH/intrakranial patoloji + hipovolemi. SIADH\'ten ayrımı zor — volüm durumu belirleyici.', priority: 'mid' }
+          { name: 'Hiperlipidemi', detail: 'Ağır hipertrigliseridemi (>1500 mg/dL) → plazma su fraksiyonu ↓. Lipemik serum görünümü. Direkt iyon-selektif elektrot ile gerçek Na ölçülmeli.', priority: 'high' },
+          { name: 'Hiperproteinemi', detail: 'Multipl myelom, Waldenström, IVIG. Total protein > 10 g/dL.', priority: 'high' },
+          { name: 'TUR sendromu / histeroskopi sendromu (erken dönemde)', detail: 'Glisin, sorbitol, mannitol içeren irrigasyon sıvılarının emilimi. Ölçüm artefaktı + gerçek hiponatremi karışımı olabilir.', priority: 'mid' }
         ];
-      } else {
-        dxList = [
-          { name: 'UNa girilirse ayırıcı tanı netleşir', detail: 'UNa < 20: ekstrarenal/efektif hipovolemi; UNa > 20: SIADH, diüretik, adrenal yetm., CSW.', priority: 'mid' }
-        ];
+        nextStep = 'Lipemik örnek araştırılmalı, lipid paneli bakılmalı, total protein, Serum protein elektroforezi.';
       }
-      nextStep = 'Volüm durumu (klinik) + UOsm + ürik asit + TFT + ACTH-kortizol. Tedavi düzeltme hızı: kronikse < 8 mEq/24sa.';
+
+      // --- HİPOTONİK HİPONATREMİ (SOsm < 275) — Gerçek hiponatremi ---
+      else {
+        pattern += ' — <strong>Hipotonik (SOsm ' + sosm.toFixed(0) + ')</strong>';
+
+        // UOsm değerlendirme: idrar dilüsyonu uygun mu?
+        if (i.u_osm !== null && i.u_osm < 100) {
+          pattern += ', UOsm <100 → uygun renal dilüsyon';
+          dxList = [
+            { name: 'Primer polidipsi', detail: 'Aşırı su alımı, idrar maksimal dilüedir (<100 mOsm/kg). Psikiyatrik (şizofreni), beer potomania.', priority: 'high' },
+            { name: 'Düşük solüt alımı (çay-tost sendromu / bira potomani)', detail: 'Yetersiz solüt → idrar atılım kapasitesi düşer. Yaşlı, malnütrisyonlu, kronik alkolik.', priority: 'high' },
+            { name: 'Sıfırlanmış osmostat (reset osmostat)', detail: 'ADH düzeyi daha düşük SNa eşiğinde sıfırlanmış. Genelde stabil, hafif hiponatremi (130-135). Gebelik, kuadriplejik, malnütrisyon.', priority: 'mid' }
+          ];
+          nextStep = 'Sıvı kısıtlaması yeterli olabilir. Diyet öyküsü, alkol kullanımı, su tüketimi sorgulaması.';
+        }
+        // UOsm >100 → uygunsuz konsantre idrar (ADH etkisi var)
+        else if (i.u_osm !== null && i.u_osm >= 100) {
+          // UNa < 20 → ekstrarenal kayıp veya efektif hipovolemi
+          if (i.u_na !== null && i.u_na < 20) {
+            pattern += ', UOsm ' + i.u_osm.toFixed(0) + ', UNa <20 → ekstrarenal/efektif hipovolemi';
+            dxList = [
+              { name: 'Hipovolemik (ekstrarenal Na+su kaybı)', detail: 'Kusma, ishal, terleme, üçüncü boşluğa kayıp (pankreatit, ileus). Klinik dehidratasyon.', priority: 'high' },
+              { name: 'Konjestif kalp yetmezliği', detail: 'Efektif arteryel kan volümü ↓ → ADH ↑. Volüm yüklü görünüm + hiponatremi. Kötü prognoz.', priority: 'high' },
+              { name: 'Siroz / asit', detail: 'Splanknik vazodilatasyon → efektif volüm ↓ → ADH ↑. Asit, periferik ödem. Hiponatremi prognoz belirteci.', priority: 'high' },
+              { name: 'Nefrotik sendrom', detail: 'Hipoalbüminemi → onkotik basınç ↓ → efektif volüm ↓.', priority: 'mid' }
+            ];
+            nextStep = 'Volüm muayenesi, albümin, proBNP, USG. Altta yatan nedeni hedef al; volüm fazlası olanlarda sıvı+tuz kısıtla.';
+          }
+          // UNa > 20 + UOsm > 100 → renal Na atılımı + ADH etkisi
+          else if (i.u_na !== null && i.u_na > 20) {
+            pattern += ', UOsm ' + i.u_osm.toFixed(0) + ', UNa >20';
+            dxList = [
+              { name: 'SIADH', detail: 'Övolemik, UOsm > 100 (genelde >300), UNa > 30, ürik asit ↓ (<4), normal tiroid/adrenal. CNS (CVA, tümör), pulmoner (SCLC, pnömoni), ilaç (SSRI, karbamazepin, siklofosfamid), postop, ağrı/bulantı.', priority: 'high' },
+              { name: 'Tiyazid diüretiği', detail: 'Yaşlı hastalarda klasik. Distal tübülde dilüsyon bozukluğu + ADH-bağımsız. Anamnezi netleştir.', priority: 'high' },
+              { name: 'Adrenal yetmezlik (primer/sekonder)', detail: 'Kortizol eksikliği → ADH supresyonu kalkar. Primer: hiperkalemi + hipotansiyon eşlik. ACTH/kortizol bak.', priority: 'high' },
+              { name: 'Hipotiroidizm (miksödem)', detail: 'Ağır vakalarda. Düşük kardiyak debi → ADH ↑.', priority: 'mid' },
+              { name: 'Serebral tuz kaybı (CSW)', detail: 'SAH/intrakranial patoloji. SIADH ile zor ayrılır — CSW hipovolemik (BUN/Cr ↑, ürik asit ↑), SIADH övolemik.', priority: 'mid' },
+              { name: 'Tuz kaybeden nefropatiler', detail: 'Tübülointerstisyel hastalık, polikistik böbrek, kronik nefrit. Tübüler fonksiyon bozukluğu.', priority: 'low' }
+            ];
+            nextStep = 'TFT, kortizol/ACTH, ürik asit, BUN/Cr (Serebral Tuz Kaybı vs SIADH). Tedavi: sıvı kısıtlama, tolvaptan/üre. Sodyum düzeltme hızı <8-10 mEq/24sa olmalı.';
+          }
+          // UOsm var ama UNa yok
+          else {
+            pattern += ', UOsm ' + i.u_osm.toFixed(0) + ' (ADH etkisi var)';
+            dxList = [
+              { name: 'UNa girilirse ayırıcı tanı netleşir', detail: 'UNa < 20: hipovolemik (ekstrarenal/efektif); UNa > 20: SIADH, tiazid, adrenal yetm., CSW.', priority: 'mid' }
+            ];
+            nextStep = 'İdrar Na ölçümü ekle.';
+          }
+        }
+        // UOsm yok
+        else {
+          pattern += ' — UOsm değerlendirmesi yapılamadı';
+          dxList = [
+            { name: 'UOsm gerekli — ayırıcı tanı yarım', detail: 'UOsm < 100: primer polidipsi/düşük solüt; UOsm > 100 + UNa < 20: hipovolemik; UOsm > 100 + UNa > 20: SIADH/tiazid/adrenal yetm.', priority: 'mid' }
+          ];
+          nextStep = 'İdrar parametreleri (UNa + UÜre + UGlukoz) ile UOsm hesaplanabilir. Volüm durumu klinik değerlendirmesi şart.';
+        }
+      }
+
+      // Düzeltme hızı uyarısı (tonisiteden bağımsız)
+      const correctionWarn = i.s_na < 120
+        ? '<br><strong style="color:var(--red)">⚠️ Ağır hiponatremi (SNa <120):</strong> Düzeltme hızı kritik. Akut (<48 saat) semptomatikse 3% NaCl ile 4-6 mEq hızlı düzelt. Kronikse <8 mEq/24sa, <18 mEq/48sa — osmotik demiyelinizasyon riski.'
+        : '<br><strong>Düzeltme hızı:</strong> Kronik hiponatremi <8 mEq/24sa, <18 mEq/48sa. Hızlı düzeltme → osmotik demiyelinizasyon (ODS).';
+      nextStep += correctionWarn;
+
     } else {
-      pattern += ' — tonisite belirsiz, SOsm gerekli';
+      // SOsm hesaplanamadı (üç bileşen verilmemiş)
+      pattern += ' — tonisite belirsiz';
       dxList = [
-        { name: 'Pseudohyponatremia', detail: 'Hiperlipidemi, hiperproteinemi (MM). SOsm normal.', priority: 'low' },
-        { name: 'Hiperglisemi → translocational', detail: 'Glukoz her 100 mg/dL ↑ → SNa ~1.6-2.4 ↓. SOsm ↑.', priority: 'high' },
-        { name: 'Hipotonik hiponatremi', detail: 'SOsm < 275 olduğu doğrulanmalı.', priority: 'high' }
+        { name: 'Tonisite sınıflaması gerekli', detail: 'Hipertonik (>295): hiperglisemi, mannitol. İzotonik (275-295): hiperlipidemi, hiperproteinemi (psödohiponatremi). Hipotonik (<275): gerçek hiponatremi — SIADH, KY, siroz, hipovolemi, vs.', priority: 'high' }
       ];
-      nextStep = 'Serum osmolalite hesabı ve glukoz/lipid/protein değerlendirmesi.';
+      nextStep = 'SNa + SÜre + SGlukoz girerseniz SOsm otomatik hesaplanır → tonisite sınıflaması yapılır → ayırıcı tanı netleşir.';
     }
     patterns.push(buildSynthesis('💧 Hiponatremi Ayırıcı Tanı', pattern, dxList, nextStep));
   }
@@ -766,8 +827,9 @@ function synthesizeDifferentials(ctx) {
         dxList = [
           { name: 'Yetersiz su alımı', detail: 'Yaşlı, demanslı, bilinç kapalı hastalar. En sık neden.', priority: 'high' },
           { name: 'Ekstrarenal su kaybı', detail: 'İnsensible kayıp, terleme, GİS kayıp.', priority: 'high' },
-          { name: 'Hipertonik sıvı yüklenmesi', detail: 'İatrojenik, hipertonik salin, NaHCO3.', priority: 'mid' }
+          { name: 'Hipertonik sıvı yüklenmesi', detail: 'İyatrojenik, hipertonik salin, NaHCO3.', priority: 'mid' }
         ];
+        nextStep = 'Su açığı hesabı: 0.6 × kg × (Serum Na/140 − 1). Yavaş düzeltilmeli (<10 mEq/24sa).';
       } else if (i.u_osm < 300) {
         pattern += ', UOsm düşük (' + i.u_osm.toFixed(0) + ') → DI patterni';
         dxList = [
@@ -782,7 +844,7 @@ function synthesizeDifferentials(ctx) {
           { name: 'Osmotik diürez', detail: 'Glukoz, mannitol, üre yüklenmesi. UOsm orta-yüksek, idrar Na değişken.', priority: 'high' }
         ];
       }
-      nextStep = 'Su deprivasyon testi + dDAVP yanıtı. Lityum, kalsiyum, K düzeyleri (NDI etyolojisi).';
+      nextStep = 'Su kısıtlama testi + dDAVP yanıtı değerlendirilebilir. Lityum, Ca, K düzeyleri (Nefrojenik DI etyolojisi) bakılabilir.';
     } else {
       pattern += ' — UOsm gerekli';
       nextStep = 'İdrar osmolalite hesaplaması (UNa + UÜre + UGlukoz girilirse otomatik) ayırıcı tanı için zorunludur.';
@@ -806,7 +868,7 @@ function synthesizeDifferentials(ctx) {
         { name: 'Amiloidoz / Light chain dep. dis.', detail: 'AL: MM, plazma hücreli diskrazi. AA: kronik inflamasyon.', priority: 'mid' },
         { name: 'Lupus nefriti', detail: 'Sınıf V (membranöz) veya proliferatif sınıflar. ANA, anti-dsDNA, kompleman.', priority: 'mid' }
       ];
-      const nextStep = 'Serum albümin, lipid, ödem değerlendirmesi. Sekonder neden taraması: ANA, anti-dsDNA, C3/C4, anti-PLA2R, HBV/HCV/HIV, SPEP/IFE, kappa/lambda. Böbrek biyopsisi endike.';
+      const nextStep = 'Albümin, lipid, ödem muayenesi. ANA, anti-dsDNA, C3/C4, anti-PLA2R, HBV/HCV/HIV, Serum protein elektroforezi, Serum İmmünfiksasyon. Biyopsi gerekebilir.';
       patterns.push(buildSynthesis('🧪 Nefrotik Düzey Proteinüri', pattern, dxList, nextStep));
     } else if ((d.pcr !== undefined && d.pcr >= 500 && d.pcr <= 3500) || (d.acr !== undefined && d.acr > 300 && d.acr <= 2200)) {
       const pattern = '<strong>Orta düzey proteinüri / Makroalbuminüri</strong>';
@@ -826,7 +888,7 @@ function synthesizeDifferentials(ctx) {
         { name: 'Kardiyovasküler risk göstergesi', detail: 'Mikroalbuminüri başlı başına bağımsız KV risk faktörü.', priority: 'mid' },
         { name: 'Geçici nedenler', detail: 'Egzersiz, ateş, enfeksiyon, kalp yetmezliği, ortostatik proteinüri (genç).', priority: 'low' }
       ];
-      const nextStep = 'En az 3 ay içinde 2-3 ölçüm tekrarı (geçici nedenleri ekarte). RAS blokajı endikasyonu, glisemi ve KB optimizasyonu.';
+      const nextStep = '3 ay içinde tekrar ölçüm tekrarı yapılmalı. RAS blokajı tedavi verilmeli, glisemi+KB optimizasyonu yapılmalı.';
       patterns.push(buildSynthesis('🧪 Mikroalbuminüri', pattern, dxList, nextStep));
     }
   }
@@ -844,7 +906,7 @@ function synthesizeDifferentials(ctx) {
       { name: 'İmmobilizasyon', detail: 'Uzun yatış, paralizi, genç hastalarda kemik resorpsiyonu.', priority: 'low' },
       { name: 'Distal RTA (tip 1)', detail: 'Asidoz + hiperkalsiüri + nefrokalsinoz/nefrolitiazis.', priority: 'mid' }
     ];
-    const nextStep = 'Serum Ca, PTH, 25(OH)D, 1,25(OH)2D, fosfor, ALP. Renal USG (taş, nefrokalsinoz). 24-saatlik idrar Ca tercihen.';
+    const nextStep = 'Serum Ca, PTH, D vitamini, Fosfor, ALP. Renal USG. 24 sa idrar Ca biriktirilmeli.';
     patterns.push(buildSynthesis('🦴 Hiperkalsiüri Ayırıcı Tanı', pattern, dxList, nextStep));
   }
 
@@ -857,7 +919,7 @@ function synthesizeDifferentials(ctx) {
       { name: 'TMA (HUS/TTP)', detail: 'Mikroanjiopatik hemolitik anemi + trombositopeni + AKI. Şistositler.', priority: 'high' },
       { name: 'Akut interstisyel nefrit (proteinüri ile)', detail: 'NSAID-ilişkili AIN bazen 1-3 g/gün proteinüri yapar.', priority: 'mid' }
     ];
-    const nextStep = 'ACİL böbrek biyopsisi düşün! ANCA, anti-GBM, ANA, anti-dsDNA, kompleman, hepatit serolojisi. Aktif sediment doğrula. Steroid + immünsupresif eşik düşük.';
+    const nextStep = 'ANCA, anti-GBM, ANA, anti-dsDNA, kompleman, hepatit belirteçler, periferik yayma, idrar sedimenti. Renal biyopsi düşünülmeli.';
     patterns.push(buildSynthesis('🚨 Proteinüri + AKI — RPGN/Glomerüler Hasar Dışla', pattern, dxList, nextStep));
   }
 
